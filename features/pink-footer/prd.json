@@ -1,0 +1,34 @@
+{
+  "project": "taskflow",
+  "branchName": "feature/pink-footer",
+  "description": "Add a distinctive, funky pink footer to TaskFlow that breaks from the conventional design system, providing navigation links, branding, and a memorable visual identity with full responsive and dark mode support.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Pink Footer Component",
+      "description": "As a user, I want a funky pink footer on every page so that the app has a distinctive brand identity and I can access navigation links from the bottom of the page.",
+      "acceptanceCriteria": [
+        "A Footer component exists at src/components/ui/Footer.tsx using semantic <footer> HTML element",
+        "The footer is rendered at the bottom of every page via the root layout (layout.tsx)",
+        "The footer uses a bold pink color scheme (gradient from pink-400 to pink-600 or similar) that is visually distinct from the rest of the app",
+        "The footer includes at least one funky design element (wave/curved SVG top border, decorative pattern, playful typography, or CSS animation) with SVG decorative elements having aria-hidden='true'",
+        "The footer displays the TaskFlow brand name and copyright line (e.g. 'TaskFlow 2026')",
+        "The footer includes at least three navigation links (e.g. Home, About, Privacy) styled for legibility against the pink background with visible hover/focus states",
+        "On desktop (md+), footer content is laid out horizontally; on mobile (<md), content stacks vertically and is centered",
+        "Dark mode support: footer uses a darker/muted pink variant (e.g. dark:bg-pink-900) with legible text in both themes",
+        "Write unit tests for the Footer component in a separate test file",
+        "Tests pass/jest coverage is 80%",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using pdm-webapp-testing skill"
+      ],
+      "priority": 1,
+      "model": "sonnet",
+      "passes": false,
+      "notes": "",
+      "jobs": [
+        {"name": "build", "agent": "build-user-story", "status": "pending", "dependsOn": null, "notes": ""},
+      ]
+    }
+  ]
+}
