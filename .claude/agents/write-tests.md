@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Bash
 model: sonnet
 ---
 
-Before starting, read `features/learnings.md` for project patterns and common mistakes.
+Before starting, read `CLAUDE.md` for project architecture and `features/learnings.md` for shared learnings from previous agent runs.
 
 Write unit tests for the provided user story. Use the project's existing test framework and patterns. Run test commands from the app directory provided by the orchestrator.
 
