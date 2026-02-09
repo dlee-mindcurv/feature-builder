@@ -5,7 +5,7 @@ tools: Read, Write, Edit
 model: sonnet
 ---
 
-Before starting, read `features/learnings.md` for project patterns and common mistakes.
+Before starting, read `CLAUDE.md` for project architecture and `features/learnings.md` for shared learnings from previous agent runs.
 
 Implement the solution for the provided user story. Satisfy every acceptance criterion. DO NOTHING ELSE.
 
