@@ -20,9 +20,9 @@ export default function RootLayout({
         <ThemeProvider>
           <TaskProvider>
             <div className="flex-1">{children}</div>
-            <Footer />
           </TaskProvider>
         </ThemeProvider>
+        <Footer />
       </body>
     </html>
   );
