@@ -1,0 +1,29 @@
+[
+  {
+    "storyId": "US-001",
+    "job": "build",
+    "agent": "build-user-story",
+    "status": "success",
+    "iterations": 3,
+    "startedAt": "2025-01-01T10:00:00Z",
+    "finishedAt": "2025-01-01T10:05:00Z"
+  },
+  {
+    "storyId": "US-001",
+    "job": "test",
+    "agent": "write-tests",
+    "status": "success",
+    "iterations": 2,
+    "startedAt": "2025-01-01T10:05:00Z",
+    "finishedAt": "2025-01-01T10:08:00Z"
+  },
+  {
+    "storyId": "US-001",
+    "job": "lint",
+    "agent": "run-lint",
+    "status": "success",
+    "iterations": 5,
+    "startedAt": "2025-01-01T10:08:00Z",
+    "finishedAt": "2025-01-01T10:10:00Z"
+  }
+]
