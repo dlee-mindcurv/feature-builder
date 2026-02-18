@@ -82,7 +82,7 @@ teardown() {
 # ---------------------------------------------------------------------------
 
 @test "smart shorthand: feature name routes to run when feature exists" {
-  install_fixture "prd-done.json" "my-feature"
+  install_fixture "prd-pending.json" "my-feature"
   create_app_dir "myapp"
   install_agents_and_commands
   # Use --dry-run so it doesn't actually call claude
