@@ -14,10 +14,13 @@ GITHUB_RAW_BASE="https://raw.githubusercontent.com/dlee-mindcurv/cc-automation-t
 # Files to download
 AGENT_FILES="build-user-story.md run-lint.md run-playwright.md run-typecheck.md write-tests.md"
 COMMAND_FILES="create-feature-from-json.md"
+HOOK_FILES="feature-complete-stop.sh"
 
 # Directories
 AGENTS_DIR=".claude/agents"
 COMMANDS_DIR=".claude/commands"
+HOOKS_DIR=".claude/hooks"
+SETTINGS_FILE=".claude/settings.json"
 FEATURES_DIR="features"
 SKILLS_INSTALL_DIR="${HOME}/.agents/skills"
 GITHUB_API_BASE="https://api.github.com/repos/dlee-mindcurv/cc-automation-tools"
@@ -262,6 +265,28 @@ cmd_doctor() {
     printf "  ${DIM}-${RESET} .claude/commands/ — not found (run: ./ralph install)\n"
   fi
 
+  # Check hooks
+  if [[ -d "$HOOKS_DIR" ]]; then
+    local hook_count=0
+    for f in $HOOK_FILES; do
+      [[ -f "${HOOKS_DIR}/${f}" ]] && hook_count=$((hook_count + 1))
+    done
+    printf "  ${GREEN}✓${RESET} .claude/hooks/ — %d/%d hooks installed\n" "$hook_count" "$(echo $HOOK_FILES | wc -w | tr -d ' ')"
+  else
+    printf "  ${DIM}-${RESET} .claude/hooks/ — not found (run: ./ralph install)\n"
+  fi
+
+  # Check settings.json
+  if [[ -f "$SETTINGS_FILE" ]]; then
+    if command -v jq >/dev/null 2>&1 && jq -e '.hooks' "$SETTINGS_FILE" >/dev/null 2>&1; then
+      printf "  ${GREEN}✓${RESET} .claude/settings.json — found with hooks configured\n"
+    else
+      printf "  ${YELLOW}!${RESET} .claude/settings.json — found but no hooks configured (run: ./ralph update)\n"
+    fi
+  else
+    printf "  ${DIM}-${RESET} .claude/settings.json — not found (run: ./ralph install)\n"
+  fi
+
   # Check skills
   if [[ -d "$SKILLS_INSTALL_DIR" ]]; then
     local skill_count=0
@@ -413,6 +438,80 @@ download_skills() {
   return 0
 }
 
+merge_settings() {
+  local skip_existing="${1:-false}"
+
+  require_jq
+  require_curl
+
+  info "Merging settings.json..."
+
+  local tmp_remote
+  tmp_remote="$(mktemp)"
+
+  if ! curl -fsSL "${GITHUB_RAW_BASE}/settings.json" -o "$tmp_remote" 2>/dev/null; then
+    rm -f "$tmp_remote"
+    warn "Could not download remote settings.json"
+    return 1
+  fi
+
+  # Validate downloaded JSON
+  if ! jq empty "$tmp_remote" 2>/dev/null; then
+    rm -f "$tmp_remote"
+    warn "Downloaded settings.json is not valid JSON"
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$SETTINGS_FILE")"
+
+  if [[ ! -f "$SETTINGS_FILE" ]]; then
+    # No local settings — use remote directly
+    mv "$tmp_remote" "$SETTINGS_FILE"
+    success "Settings: created $SETTINGS_FILE from remote"
+    return 0
+  fi
+
+  # Validate local JSON
+  if ! jq empty "$SETTINGS_FILE" 2>/dev/null; then
+    warn "Local $SETTINGS_FILE is not valid JSON — replacing with remote"
+    mv "$tmp_remote" "$SETTINGS_FILE"
+    success "Settings: replaced invalid local with remote"
+    return 0
+  fi
+
+  # Deep merge: non-hooks keys use standard merge, hooks arrays use union per event key
+  local tmp_merged
+  tmp_merged="$(mktemp)"
+
+  if jq -s '
+    # $local = .[0], $remote = .[1]
+    .[0] as $local | .[1] as $remote |
+
+    # Merge non-hooks keys (remote wins for new keys, local preserved)
+    ($local * $remote) |
+
+    # Union-merge hooks: for each event key, combine arrays and deduplicate by deep equality
+    .hooks = (
+      (($local.hooks // {}) | keys) + (($remote.hooks // {}) | keys) | unique |
+      map(. as $key |
+        {($key): (
+          (($local.hooks // {})[$key] // []) + (($remote.hooks // {})[$key] // []) |
+          reduce .[] as $item ([]; if any(. == $item) then . else . + [$item] end)
+        )}
+      ) | add // {}
+    )
+  ' "$SETTINGS_FILE" "$tmp_remote" > "$tmp_merged" 2>/dev/null; then
+    mv "$tmp_merged" "$SETTINGS_FILE"
+    rm -f "$tmp_remote"
+    success "Settings: merged remote into $SETTINGS_FILE"
+    return 0
+  else
+    rm -f "$tmp_merged" "$tmp_remote"
+    warn "Failed to merge settings.json — local file left unchanged"
+    return 1
+  fi
+}
+
 cmd_install() {
   local skip_existing=true
   cmd_install_inner "$skip_existing"
@@ -429,7 +528,7 @@ cmd_install_inner() {
 
   require_curl
 
-  info "Installing agents, commands, and skills..."
+  info "Installing agents, commands, hooks, skills, and settings..."
 
   local failed=false
 
@@ -447,8 +546,20 @@ cmd_install_inner() {
     fi
   done
 
+  # Download hooks
+  for f in $HOOK_FILES; do
+    if ! download_file "${GITHUB_RAW_BASE}/hooks/${f}" "${HOOKS_DIR}/${f}" "$skip_existing"; then
+      failed=true
+    else
+      chmod +x "${HOOKS_DIR}/${f}"
+    fi
+  done
+
   # Download skills (non-fatal)
   download_skills "$skip_existing" || warn "Skill download incomplete — see warnings above"
+
+  # Merge settings.json (always merge, even during install, to append new hook entries)
+  merge_settings "$skip_existing" || warn "Settings merge incomplete — see warnings above"
 
   # Ensure learnings.md exists
   if [[ ! -f "${FEATURES_DIR}/learnings.md" ]]; then
@@ -478,7 +589,7 @@ LEARNINGS
     return 1
   fi
 
-  success "Installed $(echo $AGENT_FILES | wc -w | tr -d ' ') agents, $(echo $COMMAND_FILES | wc -w | tr -d ' ') command(s), and skills"
+  success "Installed $(echo $AGENT_FILES | wc -w | tr -d ' ') agents, $(echo $COMMAND_FILES | wc -w | tr -d ' ') command(s), $(echo $HOOK_FILES | wc -w | tr -d ' ') hook(s), skills, and settings"
 }
 
 # =============================================================================
@@ -850,8 +961,11 @@ cmd_run() {
     for f in $COMMAND_FILES; do
       [[ -f "${COMMANDS_DIR}/${f}" ]] || { missing=true; break; }
     done
+    for f in $HOOK_FILES; do
+      [[ -f "${HOOKS_DIR}/${f}" ]] || { missing=true; break; }
+    done
     if [[ "$missing" == "true" ]]; then
-      info "Some agents/commands missing — installing..."
+      info "Some agents/commands/hooks missing — installing..."
       cmd_install
     fi
   fi
@@ -1037,6 +1151,13 @@ cmd_clean() {
     fi
   done
 
+  for f in $HOOK_FILES; do
+    if [[ -f "${HOOKS_DIR}/${f}" ]]; then
+      rm "${HOOKS_DIR}/${f}"
+      removed=$((removed + 1))
+    fi
+  done
+
   if [[ -f ".claude/.ralph-version" ]]; then
     rm ".claude/.ralph-version"
   fi
@@ -1062,9 +1183,9 @@ ${BOLD}COMMANDS${RESET}
   status [feature]    Show feature progress (all features if omitted)
   reset <feature>     Reset all job statuses to pending and remove worktree
   logs <feature>      View agent execution log
-  install             Download agents, commands, and skills; sync permissions
-  update              Force re-download latest agents, commands, and skills
-  clean               Remove downloaded agents and commands
+  install             Download agents, commands, hooks, skills, and settings; sync permissions
+  update              Force re-download latest agents, commands, hooks, skills, and settings
+  clean               Remove downloaded agents, commands, and hooks
   doctor              Check all prerequisites and system health
   self-update         Update the ralph script itself
   help                Show this help text
