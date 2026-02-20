@@ -1,3 +1,5 @@
+> **DEPRECATED:** This repository is archived. Development continues at [project-dev-builder](https://github.com/dlee-mindcurv/project-dev-builder).
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.

@@ -1,6 +1,7 @@
 {
   "name": "taskflow",
   "version": "0.1.0",
+  "description": "[DEPRECATED] Migrated to https://github.com/dlee-mindcurv/project-dev-builder",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -1,3 +1,7 @@
+> **This project is deprecated.** Development has moved to [project-dev-builder](https://github.com/dlee-mindcurv/project-dev-builder). This repository is archived and no longer maintained.
+
+---
+
 # Ralph: Subagent-Driven Feature Development
 
 Ralph is a declarative feature development system built on [Claude Code](https://docs.anthropic.com/en/docs/claude-code). You define features as JSON specifications with user stories, and Claude Code subagents autonomously implement them — building code, writing tests, fixing type errors, and resolving lint violations.
